@@ -1,532 +1,194 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <title>SPHERE — Prototype (module + GLB export, larger labels)</title>
+  <title>SPHERE — Quick Fallback (visual restore)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root{--bg:#f3f6fb;--card:#fff;--muted:#6b7280;--accent:#2b6ef6}
-    html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
-    .app{display:flex;flex-direction:column;height:100%}
-    canvas{display:block; width:100%; height:calc(100vh - 96px);}
-    .topbar{height:96px;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);box-shadow:0 8px 18px rgba(20,30,60,0.05)}
-    .controls{display:flex;gap:8px;align-items:center}
-    .btn{background:#fff;border:1px solid #e6eefb;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
-    .btn.primary{background:var(--accent);color:#fff;border:0}
-    .info{font-weight:700;color:#0b1b3b}
-    .panel{position:fixed;right:16px;top:116px;background:var(--card);padding:12px;border-radius:10px;box-shadow:0 10px 30px rgba(20,30,60,0.08);min-width:300px;max-width:380px}
-    .panel h3{margin:0 0 8px 0;font-size:14px}
-    .zone-select{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-    .zone-pill{padding:6px 8px;border-radius:999px;border:1px solid #e6eefb;background:#fbfdff;cursor:pointer;font-weight:600}
-    .zone-pill.active{background:var(--accent);color:#fff;border:0}
-    .item-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:8px;background:#f6f9ff;border:1px solid #eef3ff}
-    .small{font-size:13px;color:var(--muted)}
-    input[type="text"]{padding:8px;border-radius:8px;border:1px solid #e6eefb;width:100%}
-    .footer{height:40px;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
-    @media (max-width:920px){ .panel{left:10px;right:10px;top:auto;bottom:86px;max-width:none;} canvas{height:calc(100vh - 220px);} }
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f6fb}
+    .top{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .btn{padding:8px 12px;border-radius:8px;border:1px solid #dfe8ff;background:#fff;cursor:pointer;margin-left:8px;font-weight:600}
+    .btn.primary{background:#2b6ef6;color:#fff;border:0}
+    #canvas{width:100%;height:calc(100vh - 64px);display:block}
+    .note{color:#667085;font-size:13px}
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
-      <div style="display:flex;flex-direction:column;">
-        <div style="display:flex;gap:12px;align-items:center;">
-          <div class="info">SPHERE — Prototype</div>
-          <div class="small">Drag to spin • Tap a label to open zone • Center tap opens current zone</div>
-        </div>
-        <div class="small" style="margin-top:6px;color:var(--muted)">Persistent demo — edits stored in browser (localStorage). Export GLB for AR preview or Export JSON to share state.</div>
-      </div>
-
-      <div class="controls">
-        <button class="btn" id="prevBtn">Prev</button>
-        <button class="btn" id="spinBtn">Spin</button>
-        <button class="btn" id="nextBtn">Next</button>
-        <button class="btn" id="randomBtn">Random</button>
-        <button class="btn primary" id="enterArBtn">Enter AR (if supported)</button>
-        <button class="btn" id="exportGlbBtn">Export GLB</button>
-      </div>
+  <div class="top">
+    <div>
+      <strong>SPHERE — Fallback</strong><div class="note">Simple visual restore (non-module)</div>
     </div>
-
-    <canvas id="world"></canvas>
-    <div class="footer">Tip: On iPhone use the exported .glb to Quick Look for AR. If WebXR is supported, use Enter AR.</div>
-  </div>
-
-  <div class="panel" id="panel">
-    <h3>Zones & Items</h3>
-    <div class="zone-select" id="zoneSelect"></div>
-
-    <div style="margin-top:8px;margin-bottom:8px">
-      <input id="newItemText" type="text" placeholder="New item text (title)"/>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn primary" id="addItemBtn">Add Item</button>
-        <button class="btn" id="exportJsonBtn">Export JSON</button>
-        <button class="btn" id="importJsonBtn">Import JSON</button>
-      </div>
-      <input type="file" id="fileInput" style="display:none" accept=".json"/>
-    </div>
-
-    <div id="itemsList"></div>
-    <div style="margin-top:12px" class="small">Controls: Add / Edit / Delete; Export JSON to share or Import to restore a friend's sphere.</div>
-  </div>
-
-  <div id="overlay" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:9999">
-    <div style="background:#fff;padding:14px;border-radius:8px;min-width:300px;max-width:90%">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-weight:700" id="overlayTitle"></div>
-        <button id="overlayClose" class="btn">Close</button>
-      </div>
-      <div id="overlayItems"></div>
+    <div>
+      <button class="btn" id="prev">Prev</button>
+      <button class="btn" id="spin">Spin</button>
+      <button class="btn" id="next">Next</button>
+      <button class="btn primary" id="export">Export GLB</button>
     </div>
   </div>
 
-  <!-- Use ES module imports for Three.js and examples (modern, avoids global mismatch) -->
-  <script type="module">
-  import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
-  import { GLTFExporter } from 'https://unpkg.com/three@0.158.0/examples/jsm/exporters/GLTFExporter.js';
-  import { ARButton } from 'https://unpkg.com/three@0.158.0/examples/jsm/webxr/ARButton.js';
+  <canvas id="canvas"></canvas>
 
-  // ---------- Data & persistence ----------
-  const ZONES = ["Ideas","Tasks","People","Rituals","Mindset","Someday"];
-  const STORAGE_KEY = "sphere.v1.items";
+  <!-- Use Three r149 (non-module) and exporter that attach to global THREE -->
+  <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.149.0/examples/js/exporters/GLTFExporter.js"></script>
 
-  function defaultData(){
-    return {
-      "Ideas": ["Sketch concept","New scent idea","Pattern tweak"],
-      "Tasks": ["Call Jenna","Order labels","Send sample"],
-      "People": ["JHANE","Maeve","Arsallan"],
-      "Rituals": ["Morning stretch","2-min breath","Evening notes"],
-      "Mindset": ["Gratitude","Focus practice","Reflect"],
-      "Someday": ["Visit Japan","Archive photos","Renew domain"]
+  <script>
+  // Minimal restore demo: sphere + 6 large labels + simple spin + GLB export
+  (function(){
+    const canvas = document.getElementById('canvas');
+    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+    renderer.setPixelRatio(window.devicePixelRatio);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 2, 0.1, 2000);
+    camera.position.set(0,0,700);
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+    scene.add(light);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(200, 48, 48), new THREE.MeshStandardMaterial({color:0xf7fbff, metalness:0.02, roughness:0.7}));
+    group.add(sphere);
+
+    // zones & items (simple)
+    const ZONES = ["Ideas","Tasks","People","Rituals","Mindset","Someday"];
+    const items = {
+      "Ideas":["Sketch","Scent"], "Tasks":["Call","Order"], "People":["JHANE","Maeve"],
+      "Rituals":["Stretch"], "Mindset":["Gratitude"], "Someday":["Visit Japan"]
     };
-  }
-  function loadData(){
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw){ const d=defaultData(); localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); return d; }
-    try { return JSON.parse(raw); } catch(e){ const d=defaultData(); localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); return d; }
-  }
-  function saveData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 
-  let data = loadData();
+    // label utility (bigger)
+    function makeLabelCanvas(text, fontSize=34){
+      const padding = 18;
+      const font = 'bold ' + fontSize + 'px Arial';
+      const measure = document.createElement('canvas');
+      const mctx = measure.getContext('2d'); mctx.font = font;
+      const w = Math.max(140, Math.ceil(mctx.measureText(text).width + padding*2));
+      const h = Math.max(60, fontSize + 18);
+      const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#eaf2ff';
+      roundRect(ctx,0,0,w,h,12);
+      ctx.fillStyle = '#15304f';
+      ctx.font = font; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(text, w/2, h/2 + 1);
+      return canvas;
+    }
+    function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
 
-  // ---------- UI elements ----------
-  const zoneSelectEl = document.getElementById('zoneSelect');
-  const itemsListEl = document.getElementById('itemsList');
-  const newItemText = document.getElementById('newItemText');
-  const addItemBtn = document.getElementById('addItemBtn');
-  const exportJsonBtn = document.getElementById('exportJsonBtn');
-  const importJsonBtn = document.getElementById('importJsonBtn');
-  const fileInput = document.getElementById('fileInput');
-  const overlay = document.getElementById('overlay');
-  const overlayTitle = document.getElementById('overlayTitle');
-  const overlayItems = document.getElementById('overlayItems');
-  const overlayClose = document.getElementById('overlayClose');
-
-  let activeZoneIndex = 0;
-
-  function renderZonePills(){
-    zoneSelectEl.innerHTML = "";
-    ZONES.forEach((z,i)=>{
-      const btn = document.createElement('div');
-      btn.className = "zone-pill" + (i===activeZoneIndex ? " active":"");
-      btn.textContent = z;
-      btn.addEventListener('click', ()=> { setActiveZone(i); snapToZone(i); });
-      zoneSelectEl.appendChild(btn);
-    });
-  }
-
-  function renderItemsPanel(){
-    itemsListEl.innerHTML = "";
-    const zone = ZONES[activeZoneIndex];
-    const arr = data[zone] || [];
-    arr.forEach((it, idx) => {
-      const row = document.createElement('div'); row.className='item-row';
-      const left = document.createElement('div'); left.textContent = it;
-      const right = document.createElement('div');
-      const edit = document.createElement('button'); edit.className='btn'; edit.textContent='Edit'; edit.addEventListener('click', ()=> editItem(idx));
-      const del = document.createElement('button'); del.className='btn'; del.textContent='Delete'; del.addEventListener('click', ()=> deleteItem(idx));
-      right.appendChild(edit); right.appendChild(del);
-      row.appendChild(left); row.appendChild(right);
-      itemsListEl.appendChild(row);
-    });
-  }
-
-  function setActiveZone(i){
-    activeZoneIndex = ((i%ZONES.length)+ZONES.length)%ZONES.length;
-    renderZonePills();
-    renderItemsPanel();
-  }
-  function addItem(){
-    const text = newItemText.value.trim();
-    if(!text) return alert("Enter item text");
-    const zone = ZONES[activeZoneIndex];
-    data[zone] = data[zone] || [];
-    data[zone].unshift(text);
-    saveData(data);
-    newItemText.value = "";
-    renderItemsPanel();
-    refreshPins();
-  }
-  function editItem(idx){
-    const zone = ZONES[activeZoneIndex];
-    const old = data[zone][idx];
-    const val = prompt("Edit item text", old);
-    if(val==null) return;
-    data[zone][idx] = val;
-    saveData(data);
-    renderItemsPanel();
-    refreshPins();
-  }
-  function deleteItem(idx){
-    if(!confirm("Delete this item?")) return;
-    const zone = ZONES[activeZoneIndex];
-    data[zone].splice(idx,1);
-    saveData(data);
-    renderItemsPanel();
-    refreshPins();
-  }
-
-  addItemBtn.addEventListener('click', addItem);
-  newItemText.addEventListener('keydown', (e)=> { if(e.key==='Enter'){ addItem(); }});
-  exportJsonBtn.addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'sphere-data.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  });
-  importJsonBtn.addEventListener('click', ()=> fileInput.click());
-  fileInput.addEventListener('change', (ev)=>{
-    const f = ev.target.files[0];
-    if(!f) return;
-    const reader = new FileReader();
-    reader.onload = function(){ try{ const parsed=JSON.parse(reader.result); data = parsed; saveData(data); setActiveZone(0); renderItemsPanel(); refreshPins(); alert("Imported!"); } catch(e){ alert("Invalid JSON"); }}
-    reader.readAsText(f);
-  });
-  overlayClose.addEventListener('click', ()=> overlay.style.display='none');
-
-  renderZonePills();
-  renderItemsPanel();
-
-  // ---------- Three.js scene (module) ----------
-  const canvas = document.getElementById('world');
-  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.xr.enabled = true; // for ARButton later
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50,2,0.1,2000);
-  camera.position.set(0,0,600);
-  const light = new THREE.HemisphereLight(0xffffff,0x666666,1.2);
-  scene.add(light);
-  const group = new THREE.Group();
-  scene.add(group);
-
-  // main sphere
-  const sphere = new THREE.Mesh(new THREE.SphereGeometry(200,64,64), new THREE.MeshStandardMaterial({color:0xf7fbff,metalness:0.02,roughness:0.7}));
-  group.add(sphere);
-
-  // arrays
-  let markers = [];
-  let pins = [];
-
-  // helpers
-  function sphericalToCartesian(radius, thetaDeg, phiDeg){
-    const theta = THREE.MathUtils.degToRad(thetaDeg);
-    const phi = THREE.MathUtils.degToRad(phiDeg);
-    const x = radius * Math.cos(phi) * Math.cos(theta);
-    const y = radius * Math.sin(phi);
-    const z = radius * Math.cos(phi) * Math.sin(theta);
-    return new THREE.Vector3(x,y,z);
-  }
-
-  // label canvas creator (larger labels)
-  function makeLabelCanvas(text, opts){
-    opts = opts || {};
-    const bg = opts.bg || "#fff";
-    const fg = opts.fg || "#112340";
-    const padding = 18; // bigger padding
-    const fontSize = opts.fontSize || 28; // bigger font
-    const font = `bold ${fontSize}px Arial`;
-    const measure = document.createElement('canvas');
-    const mctx = measure.getContext('2d');
-    mctx.font = font;
-    const w = Math.max(120, Math.ceil(mctx.measureText(text).width + padding*2));
-    const h = Math.max(56, Math.ceil(fontSize + 18));
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = bg;
-    roundRect(ctx,0,0,w,h,14);
-    ctx.fillStyle = fg;
-    ctx.font = font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, w/2, h/2 + 1);
-    return canvas;
-  }
-  function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
-
-  // create markers & pins (bigger scale than before)
-  function refreshPins(){
-    // remove old
-    markers.forEach(m=> group.remove(m)); markers=[];
-    pins.forEach(p=> group.remove(p)); pins=[];
-
-    ZONES.forEach((z,i)=>{
-      const theta = i*(360/ZONES.length);
+    // place labels around equator
+    const markers = [];
+    for(let i=0;i<6;i++){
+      const theta = i*(360/6);
       const pos = sphericalToCartesian(201, theta, 0);
-      const canvas = makeLabelCanvas(z, {bg:"#eaf2ff", fg:"#15304f", fontSize:32});
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.needsUpdate = true;
+      const c = makeLabelCanvas(ZONES[i], 36);
+      const tex = new THREE.CanvasTexture(c);
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
-      // Larger label scale: increase multiplier for better readability
-      sprite.scale.set(canvas.width * 0.28, canvas.height * 0.28, 1);
+      sprite.scale.set(c.width*0.25, c.height*0.25, 1);
       sprite.position.copy(pos);
-      sprite.userData = { zoneIndex: i, label: z };
-      sprite.center.set(0.5,0.5);
+      sprite.userData = {zone:i};
       group.add(sprite);
       markers.push(sprite);
+    }
+
+    // small top item pins
+    for(let i=0;i<6;i++){
+      const text = items[ZONES[i]][0] || "(empty)";
+      const c = makeLabelCanvas(text,20);
+      const tex = new THREE.CanvasTexture(c);
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
+      const pos = sphericalToCartesian(204, i*(360/6)+18, 12);
+      s.position.copy(pos); s.scale.set(c.width*0.18, c.height*0.18, 1);
+      group.add(s);
+    }
+
+    function sphericalToCartesian(radius, thetaDeg, phiDeg){
+      const theta = thetaDeg * Math.PI/180;
+      const phi = phiDeg * Math.PI/180;
+      const x = radius * Math.cos(phi) * Math.cos(theta);
+      const y = radius * Math.sin(phi);
+      const z = radius * Math.cos(phi) * Math.sin(theta);
+      return new THREE.Vector3(x,y,z);
+    }
+
+    // resize
+    function resize(){ const w = canvas.clientWidth || window.innerWidth; const h = canvas.clientHeight || window.innerHeight - 64; renderer.setSize(w,h); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+    window.addEventListener('resize', resize); resize();
+
+    // spin
+    let rotY = 0, vel = 0, isDown=false, lastX=0;
+    const sensitivity=0.008, damping=0.94;
+    canvas.addEventListener('mousedown', e=>{ isDown=true; lastX=e.clientX; vel=0; });
+    canvas.addEventListener('mousemove', e=>{ if(!isDown) return; const dx=e.clientX-lastX; lastX=e.clientX; const d = dx*sensitivity; rotY += d; vel = d; });
+    window.addEventListener('mouseup', ()=>{ if(!isDown) return; isDown=false; snapToNearest(); });
+
+    canvas.addEventListener('touchstart', e=>{ isDown=true; lastX=e.touches[0].clientX; vel=0; }, {passive:true});
+    canvas.addEventListener('touchmove', e=>{ if(!isDown) return; const dx=e.touches[0].clientX-lastX; lastX=e.touches[0].clientX; const d = dx*sensitivity; rotY += d; vel = d; }, {passive:true});
+    window.addEventListener('touchend', ()=>{ if(!isDown) return; isDown=false; snapToNearest(); });
+
+    function nearestZoneFromRot(r){
+      const fraction = ((-r / (2*Math.PI)) % 1 + 1) % 1;
+      return Math.round(fraction*6) % 6;
+    }
+    let targetRot = null;
+    function snapToNearest(){ const n = nearestZoneFromRot(rotY); const desiredFrac = n/6; const curFrac = ((-rotY/(2*Math.PI))%1+1)%1; let diff = desiredFrac - curFrac; if(diff>0.5) diff -=1; if(diff<-0.5) diff +=1; targetRot = rotY - diff*2*Math.PI; }
+
+    // buttons
+    document.getElementById('prev').addEventListener('click', ()=> { snapToNearest(); targetRot += (2*Math.PI)/6; });
+    document.getElementById('next').addEventListener('click', ()=> { snapToNearest(); targetRot -= (2*Math.PI)/6; });
+    document.getElementById('spin').addEventListener('click', ()=>{ let spins=12+Math.floor(Math.random()*10), i=0; const iv=setInterval(()=>{ rotY -= (2*Math.PI)/6; i++; if(i>=spins){ clearInterval(iv); snapToNearest(); } }, 60); });
+
+    // click raycast
+    const ray = new THREE.Raycaster(); const pointer = new THREE.Vector2();
+    canvas.addEventListener('click', function(e){
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left)/rect.width)*2 -1;
+      pointer.y = -((e.clientY - rect.top)/rect.height)*2 +1;
+      ray.setFromCamera(pointer, camera);
+      const ints = ray.intersectObjects(markers, true);
+      if(ints.length){ const z = ints[0].object.userData.zone; alert('Zone: ' + ZONES[z]); snapToZone(z); }
     });
 
-    ZONES.forEach((z,i)=>{
-      const first = (data[z] && data[z][0]) ? data[z][0] : "(empty)";
-      const theta = i*(360/ZONES.length) + 18;
-      const pos = sphericalToCartesian(202, theta, 12);
-      const canvas = makeLabelCanvas(first, {bg:"#fff", fg:"#1b2a47", fontSize:20});
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.needsUpdate = true;
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
-      sprite.scale.set(canvas.width * 0.22, canvas.height * 0.22, 1); // larger than previous
-      sprite.position.copy(pos);
-      sprite.center.set(0.5,0.5);
-      group.add(sprite);
-      pins.push(sprite);
+    function snapToZone(i){ const desired = i/6; const cur = ((-rotY/(2*Math.PI))%1+1)%1; let diff=desired-cur; if(diff>0.5) diff-=1; if(diff<-0.5) diff+=1; targetRot = rotY - diff*2*Math.PI; }
+
+    // render loop
+    function animate(){
+      requestAnimationFrame(animate);
+      if(!isDown){ vel *= damping; rotY += vel; if(targetRot !== null){ rotY += (targetRot - rotY)*0.18; if(Math.abs(targetRot - rotY) < 0.0005){ rotY = targetRot; targetRot = null; } } }
+      group.rotation.y = rotY;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // GLB export (simple)
+    const exporter = new THREE.GLTFExporter();
+    document.getElementById('export').addEventListener('click', ()=>{
+      try {
+        const exportScene = new THREE.Scene();
+        const s = new THREE.Mesh(sphere.geometry.clone(), new THREE.MeshStandardMaterial({color:0xf7fbff}));
+        exportScene.add(s);
+        // little label boxes
+        const mat = new THREE.MeshStandardMaterial({color:0x2b6ef6});
+        for(let i=0;i<6;i++){ const g = new THREE.BoxGeometry(8,8,2); const m = new THREE.Mesh(g, mat); const p = sphericalToCartesian(220, i*(360/6), 0); m.position.copy(p); exportScene.add(m); }
+        exporter.parse(exportScene, function(result){
+          if(result instanceof ArrayBuffer){
+            const blob = new Blob([result], {type:'model/gltf-binary'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'sphere_scene.glb'; a.click(); URL.revokeObjectURL(url);
+            alert('GLB exported.');
+          } else {
+            const txt = JSON.stringify(result, null, 2);
+            const blob = new Blob([txt], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href=url; a.download='sphere_scene.gltf'; a.click(); URL.revokeObjectURL(url);
+            alert('GLTF exported.');
+          }
+        }, {binary:true});
+      } catch(err){ console.error(err); alert('Export failed: '+err); }
     });
-  }
 
-  refreshPins();
-
-  // resize
-  function resize(){
-    const w = canvas.clientWidth || window.innerWidth;
-    const h = canvas.clientHeight || (window.innerHeight - 96);
-    renderer.setSize(w,h);
-    camera.aspect = w/h;
-    camera.updateProjectionMatrix();
-  }
-  window.addEventListener('resize', resize); resize();
-
-  // drag / spin with inertia & snap
-  let isDown=false, lastX=0, velocity=0, rotY=0;
-  const sensitivity = 0.008, damping = 0.93;
-  let targetRotY = null;
-
-  function pointerDown(e){
-    isDown = true;
-    lastX = e.touches ? e.touches[0].clientX : e.clientX;
-    velocity = 0;
-    targetRotY = null;
-  }
-  function pointerMove(e){
-    if(!isDown) return;
-    const x = e.touches ? e.touches[0].clientX : e.clientX;
-    const dx = x - lastX;
-    lastX = x;
-    const delta = dx * sensitivity;
-    rotY += delta;
-    velocity = delta;
-  }
-  function pointerUp(e){
-    if(!isDown) return;
-    isDown = false;
-    // snap to nearest zone
-    const nearest = nearestZoneFromRot(rotY);
-    snapToZone(nearest);
-  }
-
-  canvas.addEventListener('mousedown', pointerDown);
-  canvas.addEventListener('mousemove', pointerMove);
-  window.addEventListener('mouseup', pointerUp);
-  canvas.addEventListener('touchstart', pointerDown, {passive:true});
-  canvas.addEventListener('touchmove', pointerMove, {passive:true});
-  window.addEventListener('touchend', pointerUp);
-
-  function nearestZoneFromRot(rY){
-    const fraction = ((-rY / (2*Math.PI)) % 1 + 1) % 1;
-    let idx = Math.round(fraction * ZONES.length) % ZONES.length;
-    return idx;
-  }
-  function snapToZone(zoneIdx){
-    const desiredFraction = zoneIdx / ZONES.length;
-    const currentFrac = ((-rotY / (2*Math.PI)) % 1 + 1) % 1;
-    let diff = desiredFraction - currentFrac;
-    if(diff > 0.5) diff -= 1;
-    if(diff < -0.5) diff += 1;
-    targetRotY = rotY - diff * 2*Math.PI;
-  }
-
-  // UI buttons
-  document.getElementById('prevBtn').addEventListener('click', ()=> snapToZone((nearestZoneFromRot(rotY)-1 + ZONES.length)%ZONES.length));
-  document.getElementById('nextBtn').addEventListener('click', ()=> snapToZone((nearestZoneFromRot(rotY)+1)%ZONES.length));
-  document.getElementById('randomBtn').addEventListener('click', ()=> snapToZone(Math.floor(Math.random()*ZONES.length)));
-  document.getElementById('spinBtn').addEventListener('click', ()=> {
-    let spins = 12 + Math.floor(Math.random()*10); let i=0;
-    const iv = setInterval(()=>{ rotY -= (2*Math.PI)/ZONES.length; i++; if(i>=spins){ clearInterval(iv); snapToZone(nearestZoneFromRot(rotY)); } }, 60);
-  });
-
-  // click / raycast to open zone overlay
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  function onClick(e){
-    const rect = renderer.domElement.getBoundingClientRect();
-    const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);
-    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = - ((clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObjects(markers.concat(pins), true);
-    if(intersects.length){
-      const obj = intersects[0].object;
-      if(obj.userData && obj.userData.zoneIndex !== undefined){
-        const zi = obj.userData.zoneIndex;
-        snapToZone(zi);
-        openOverlayForZone(zi);
-        return;
-      }
-    }
-    const intersectsSphere = raycaster.intersectObject(sphere);
-    if(intersectsSphere.length){
-      const idx = nearestZoneFromRot(rotY);
-      snapToZone(idx);
-      openOverlayForZone(idx);
-    }
-  }
-  canvas.addEventListener('click', onClick);
-  canvas.addEventListener('touchend', (e)=> { if(e.changedTouches && e.changedTouches.length) onClick(e.changedTouches[0]); });
-
-  function openOverlayForZone(idx){
-    overlayTitle.textContent = ZONES[idx];
-    overlayItems.innerHTML = "";
-    (data[ZONES[idx]] || []).forEach(it => {
-      const d = document.createElement('div'); d.className='item-row'; d.textContent = it;
-      overlayItems.appendChild(d);
-    });
-    overlay.style.display = 'flex';
-  }
-
-  // ---------- render loop ----------
-  function animate(){
-    requestAnimationFrame(animate);
-    if(!isDown && Math.abs(velocity) > 0.00001){
-      rotY += velocity;
-      velocity *= damping;
-    }
-    if(targetRotY !== null){
-      rotY += (targetRotY - rotY) * 0.18;
-      if(Math.abs(targetRotY - rotY) < 0.0005){ rotY = targetRotY; targetRotY = null; velocity = 0; setActiveZone(nearestZoneFromRot(rotY)); }
-    }
-    group.rotation.y = rotY;
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  // ---------- sync UI for active zone ----------
-  function setActiveZone(i){
-    activeZoneIndex = ((i%ZONES.length)+ZONES.length)%ZONES.length;
-    renderZonePills();
-    renderItemsPanel();
-  }
-  setActiveZone(0);
-
-  // ---------- refresh helper for data changes ----------
-  function refreshPins(){
-    // remove and rebuild (keeps code simpler)
-    markers.forEach(m=> group.remove(m)); markers=[]; pins.forEach(p=> group.remove(p)); pins=[];
-    ZONES.forEach((z,i)=>{
-      const theta = i*(360/ZONES.length);
-      const pos = sphericalToCartesian(201, theta, 0);
-      const canvas = makeLabelCanvas(z, {bg:"#eaf2ff", fg:"#15304f", fontSize:32});
-      const tex = new THREE.CanvasTexture(canvas); tex.needsUpdate=true;
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
-      sprite.scale.set(canvas.width * 0.28, canvas.height * 0.28, 1);
-      sprite.position.copy(pos); sprite.userData = { zoneIndex: i, label: z }; sprite.center.set(0.5,0.5);
-      group.add(sprite); markers.push(sprite);
-    });
-    ZONES.forEach((z,i)=>{
-      const first = (data[z] && data[z][0]) ? data[z][0] : "(empty)";
-      const theta = i*(360/ZONES.length) + 18;
-      const pos = sphericalToCartesian(202, theta, 12);
-      const canvas = makeLabelCanvas(first, {bg:"#fff", fg:"#1b2a47", fontSize:20});
-      const tex = new THREE.CanvasTexture(canvas); tex.needsUpdate=true;
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
-      sprite.scale.set(canvas.width * 0.22, canvas.height * 0.22, 1);
-      sprite.position.copy(pos); sprite.center.set(0.5,0.5);
-      group.add(sprite); pins.push(sprite);
-    });
-  }
-
-  // ---------- GLB export (module-based) ----------
-  const exporter = new GLTFExporter();
-  document.getElementById('exportGlbBtn').addEventListener('click', ()=> {
-    try {
-      // Build a small export scene: a sphere + simple label boxes
-      const exportScene = new THREE.Scene();
-      const sClone = new THREE.Mesh(sphere.geometry.clone(), new THREE.MeshStandardMaterial({color:0xf7fbff}));
-      exportScene.add(sClone);
-      const boxMat = new THREE.MeshStandardMaterial({color:0x2b6ef6});
-      ZONES.forEach((z,i)=>{
-        const geom = new THREE.BoxGeometry(8,8,2);
-        const m = new THREE.Mesh(geom, boxMat);
-        const pos = sphericalToCartesian(220, i*(360/ZONES.length), 0);
-        m.position.copy(pos);
-        exportScene.add(m);
-      });
-
-      exporter.parse(exportScene, function(result){
-        if(result instanceof ArrayBuffer){
-          const blob = new Blob([result], {type: 'model/gltf-binary'});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a'); a.href = url; a.download = 'sphere_scene.glb'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-          alert('GLB exported (binary). Download should begin.');
-        } else {
-          const text = JSON.stringify(result, null, 2);
-          const blob = new Blob([text], {type:'application/json'});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a'); a.href = url; a.download = 'sphere_scene.gltf'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-          alert('GLTF exported (JSON). Save and open in a compatible viewer.');
-        }
-      }, {binary:true});
-    } catch(err) {
-      console.error('Export error',err); alert('GLB export failed: ' + (err && err.message ? err.message : err));
-    }
-  });
-
-  // ---------- WebXR / AR entry ----------
-  const enterArBtn = document.getElementById('enterArBtn');
-  enterArBtn.addEventListener('click', ()=> {
-    // try to create an ARButton (if supported). This will inject a button that starts a session.
-    try {
-      const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
-      // If ARButton createButton appended, it will show a system dialog for AR permission.
-      // We append it temporarily to the topbar for users that have support.
-      document.querySelector('.topbar').appendChild(arButton);
-      alert('If your browser supports WebXR AR, a small AR button will appear. If not, use Export GLB for Quick Look.');
-    } catch(e){
-      console.warn('ARButton failed',e);
-      alert('WebXR / AR not available in this browser. Use Export GLB for Quick Look on mobile.');
-    }
-  });
-
-  // ---------- utilities ----------
-  function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
-  // Already defined sphericalToCartesian above for exportScene reuse
-
-  // initial refresh & resize
-  refreshPins();
-  renderZonePills();
-  renderItemsPanel();
-  resize();
-
-  // small helpful note
-  if(!navigator.xr) console.log("WebXR not available. Use Export GLB for local AR preview (Quick Look on iOS).");
-
+    // done
+  })();
   </script>
 </body>
 </html>
