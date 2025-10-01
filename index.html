@@ -1,0 +1,315 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sphere Organizer — 3D Spin Prototype</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <style>
+    html,body { height:100%; margin:0; background:#f3f6fb; font-family:system-ui,Segoe UI,Roboto,Arial; }
+    #app { height:100%; display:flex; flex-direction:column; align-items:stretch; }
+    #canvas { flex:1 1 auto; display:block; }
+    .ui { display:flex; gap:8px; padding:10px; align-items:center; justify-content:center; background:#fff; box-shadow:0 -6px 18px rgba(20,30,60,0.04); }
+    .btn { padding:8px 12px; border-radius:8px; border:1px solid #d6dbe8; background:white; cursor:pointer; }
+    .info { text-align:center; font-weight:600; }
+    .overlay { position:fixed; left:0; top:0; right:0; bottom:0; display:none; align-items:center; justify-content:center; background: rgba(5,10,20,0.45); z-index:20; }
+    .card { background:white; padding:16px 20px; border-radius:10px; min-width:280px; max-width:90%; box-shadow:0 12px 36px rgba(10,20,40,0.18); }
+    .close { float:right; cursor:pointer; font-weight:700; color:#444; }
+    .zone-title { font-size:18px; margin-bottom:8px; }
+    .item { padding:6px 10px; margin:6px 0; background:#f6f8fb; border-radius:8px; border:1px solid #e6e9ef; }
+    @media (max-width:600px){ .ui{flex-wrap:wrap;padding:8px;} .btn{padding:6px 10px;} }
+  </style>
+</head>
+<body>
+<div id="app">
+  <canvas id="canvas"></canvas>
+  <div class="ui">
+    <button class="btn" id="prev">Prev</button>
+    <button class="btn" id="spinFast">Spin Fast</button>
+    <button class="btn" id="next">Next</button>
+    <button class="btn" id="random">Random</button>
+    <div class="info" id="info">Zone: <span id="zoneName">Ideas</span> — Item: <span id="itemName">Sketch concept</span></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="card" role="dialog">
+    <div><span class="zone-title" id="overlayTitle"></span><span class="close" id="overlayClose">✕</span></div>
+    <div id="itemsList"></div>
+  </div>
+</div>
+
+<!-- Three.js from CDN -->
+<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+
+<script>
+/* Simple Three.js sphere spin prototype
+   - Drag horizontally to rotate (mouse & touch)
+   - Inertia after drag
+   - Six labeled zone markers placed on sphere using spherical coordinates
+   - Click marker -> overlay shows simple items for the zone
+*/
+
+const container = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas: container, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0xffffff, 0); // transparent
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 2, 0.1, 2000);
+camera.position.set(0, 0, 600);
+
+const light = new THREE.HemisphereLight(0xffffff, 0x666666, 1.2);
+scene.add(light);
+
+const group = new THREE.Group();
+scene.add(group);
+
+// sphere
+const sphereGeom = new THREE.SphereGeometry(200, 48, 48);
+const sphereMat = new THREE.MeshStandardMaterial({ color: 0xf7fbff, metalness: 0.02, roughness: 0.7 });
+const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+sphere.castShadow = true;
+group.add(sphere);
+
+// subtle rim highlight using another slightly larger sphere
+const rim = new THREE.Mesh(new THREE.SphereGeometry(201, 32, 32), new THREE.MeshBasicMaterial({ color:0xffffff, opacity:0.06, transparent:true }));
+group.add(rim);
+
+// zones and items
+const zones = ["Ideas","Tasks","People","Rituals","Mindset","Someday"];
+const items = {
+  "Ideas": ["Sketch concept","New scent idea","Pattern tweak"],
+  "Tasks": ["Call Jenna","Order labels","Send sample"],
+  "People": ["JHANE","Maeve","Arsallan"],
+  "Rituals": ["Morning stretch","2-min breath","Evening notes"],
+  "Mindset": ["Gratitude","Focus practice","Reflect"],
+  "Someday": ["Visit Japan","Archive photos","Renew domain"]
+};
+
+// helper: convert spherical coords (theta phi) to vector
+function sphericalToCartesian(radius, thetaDeg, phiDeg){
+  const theta = THREE.MathUtils.degToRad(thetaDeg); // longitude
+  const phi = THREE.MathUtils.degToRad(phiDeg); // latitude from top
+  const x = radius * Math.cos(phi) * Math.cos(theta);
+  const y = radius * Math.sin(phi);
+  const z = radius * Math.cos(phi) * Math.sin(theta);
+  return new THREE.Vector3(x, y, z);
+}
+
+// create small markers for each zone positioned evenly around equator
+const markers = [];
+for (let i=0;i<zones.length;i++){
+  const theta = i * (360 / zones.length);      // around equator
+  const phi = 0; // equator
+  const pos = sphericalToCartesian(200.5, theta, phi);
+  // create small sprite marker
+  const spriteMat = new THREE.SpriteMaterial({ 
+    map: new THREE.CanvasTexture(makeLabelCanvas(zones[i])),
+    depthTest: false, depthWrite: false
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(110, 44, 1);
+  sprite.position.copy(pos);
+  sprite.userData = { zone: zones[i] };
+  group.add(sprite);
+  markers.push(sprite);
+}
+
+// also add small item pins slightly above equator for visual demo
+function makePin(text){
+  const c = makeLabelCanvas(text, {bg:"#fff", fg:"#1b264f"});
+  const mat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c) });
+  const s = new THREE.Sprite(mat);
+  s.scale.set(86, 30, 1);
+  return s;
+}
+
+// place sample item pins around sphere for initial visual
+let pins = [];
+let idx=0;
+for (const z of zones){
+  const t = idx*(360/zones.length) + 18;
+  const pin = makePin(items[z][0]);
+  const pos = sphericalToCartesian(201.2, t, 12); // slight latitude
+  pin.position.copy(pos);
+  group.add(pin);
+  pins.push(pin);
+  idx++;
+}
+
+// label canvas utility
+function makeLabelCanvas(text, opts){
+  opts = opts || {};
+  const bg = opts.bg || "#e9f0ff";
+  const fg = opts.fg || "#1b2a47";
+  const padding = 12;
+  const font = "bold 18px Arial";
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+  mctx.font = font;
+  const w = Math.max(80, mctx.measureText(text).width + padding*2);
+  const h = 38;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = bg;
+  roundRect(ctx, 0, 0, w, h, 10);
+  ctx.fillStyle = fg;
+  ctx.font = font;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, w/2, h/2 + 1);
+  return canvas;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// resize handling
+function resize(){
+  const w = container.clientWidth || window.innerWidth;
+  const h = container.clientHeight || window.innerHeight - 64;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// rotation controls: drag to rotate around Y axis with inertia
+let isPointerDown=false, startX=0;
+let rotY = 0;
+let velocity = 0;
+const damping = 0.95;
+const sensitivity = 0.01;
+
+function onPointerDown(e){
+  isPointerDown = true;
+  startX = (e.touches ? e.touches[0].clientX : e.clientX);
+  velocity = 0;
+}
+function onPointerMove(e){
+  if(!isPointerDown) return;
+  const x = (e.touches ? e.touches[0].clientX : e.clientX);
+  const dx = x - startX;
+  startX = x;
+  const delta = dx * sensitivity;
+  rotY += delta;
+  velocity = delta;
+}
+function onPointerUp(e){
+  isPointerDown = false;
+}
+container.addEventListener('mousedown', onPointerDown);
+container.addEventListener('mousemove', onPointerMove);
+window.addEventListener('mouseup', onPointerUp);
+container.addEventListener('touchstart', onPointerDown, {passive:true});
+container.addEventListener('touchmove', onPointerMove, {passive:true});
+window.addEventListener('touchend', onPointerUp);
+
+// raycasting for clicks
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+function onClick(e){
+  // compute normalized pointer
+  const rect = renderer.domElement.getBoundingClientRect();
+  const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = - ((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const intersects = raycaster.intersectObjects(markers, true);
+  if(intersects.length){
+    const m = intersects[0].object;
+    openOverlayForZone(m.userData.zone);
+    return;
+  }
+  // clicking center: open overlay for current zone item
+  const intersectsCenter = raycaster.intersectObject(sphere);
+  if(intersectsCenter.length){
+    openOverlayForZone(zones[currentZoneIdx()]);
+  }
+}
+container.addEventListener('click', onClick);
+
+// overlay UI
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlayTitle');
+const itemsList = document.getElementById('itemsList');
+document.getElementById('overlayClose').addEventListener('click', ()=> overlay.style.display='none');
+
+function openOverlayForZone(zone){
+  overlayTitle.textContent = zone;
+  itemsList.innerHTML = '';
+  for(const it of items[zone]){
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.textContent = it;
+    itemsList.appendChild(div);
+  }
+  overlay.style.display = 'flex';
+}
+
+// small helpers for UI buttons
+function currentZoneIdx(){ return Math.round(((rotY % (2*Math.PI)) / (2*Math.PI)) * -zones.length) % zones.length; }
+function clampZoneIndex(i){ i = (i%zones.length + zones.length) % zones.length; return i; }
+
+function renderInfo(){
+  // Map rotY angle to nearest zone index (so center-facing zone shows)
+  // compute normalized fraction (0..1) using rotY (radians)
+  const frac = (-rotY / (2*Math.PI)) % 1;
+  let index = Math.round(frac * zones.length);
+  index = clampZoneIndex(index);
+  const zn = zones[index];
+  const it = items[zn][0];
+  document.getElementById('zoneName').textContent = zn;
+  document.getElementById('itemName').textContent = it;
+}
+
+// UI buttons actions
+document.getElementById('prev').addEventListener('click', ()=> { rotY += (2*Math.PI)/zones.length; velocity = 0.1; });
+document.getElementById('next').addEventListener('click', ()=> { rotY -= (2*Math.PI)/zones.length; velocity = -0.1; });
+document.getElementById('random').addEventListener('click', ()=> {
+  const r = Math.floor(Math.random()*zones.length);
+  // rotate to that zone smoothly
+  const current = clampZoneIndex(Math.round((-rotY/(2*Math.PI))*zones.length));
+  const diff = (r - current);
+  rotY -= diff * (2*Math.PI)/zones.length;
+});
+document.getElementById('spinFast').addEventListener('click', ()=> {
+  let spins = 12 + Math.floor(Math.random()*8);
+  let i=0;
+  const iv = setInterval(()=>{
+    rotY -= (2*Math.PI)/zones.length;
+    i++;
+    if(i>=spins){ clearInterval(iv); }
+  }, 60);
+});
+
+// animation loop
+function animate(){
+  requestAnimationFrame(animate);
+  // inertia
+  if(!isPointerDown){
+    velocity *= damping;
+    rotY += velocity;
+    if(Math.abs(velocity) < 0.00001) velocity = 0;
+  }
+  // set group rotation
+  group.rotation.y = rotY;
+  renderer.render(scene, camera);
+  renderInfo();
+}
+animate();
+
+</script>
+</body>
+</html>
